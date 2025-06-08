@@ -23,3 +23,15 @@ theorem sum_of_two_squares_not_three_mod_four :
   cases @sq_mod_four a <;> cases @sq_mod_four b
     <;> omega
 
+
+example {p q } (h₁₄ : p ≡ 11 [ZMOD 30]) (hq₁₄ : q ≡ 11 [ZMOD 30]) :
+    p - q ≡ 0 [ZMOD 30] := by
+  have h₁ : 30 ∣ (p - 11) := by
+    -- have := h₁₄.dvd
+    exact Int.dvd_self_sub_of_emod_eq h₁₄
+  have h₂ : 30 ∣ (q - 11) := by
+    exact Int.dvd_self_sub_of_emod_eq hq₁₄
+  have h₃ : 30 ∣ (p - 11 - (q - 11)) := Int.dvd_sub h₁ h₂
+  simp only [sub_sub_sub_cancel_right] at h₃
+  exact Dvd.dvd.modEq_zero_int h₃
+

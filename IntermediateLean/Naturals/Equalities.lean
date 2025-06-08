@@ -19,3 +19,24 @@ theorem Nat.sub_sq {a b : ℕ} (b_le_a : b ≤ a) :
     omega
 
   ring_nf
+
+
+theorem factorization_lcm_max {p : ℕ} {a b : ℕ}
+  (ha : a ≠ 0) (hb : b ≠ 0) {prime_p : Prime p} :
+  padicValNat p (a.lcm b) = padicValNat p a ⊔ padicValNat p b
+    := by
+  have := Nat.factorization_lcm ha hb
+  apply congrArg (· p) at this
+  simpa [<- Nat.factorization_def _ prime_p.nat_prime]
+
+
+-- Proven by reducing to difference of squares
+lemma factorization_4_2_4 (n p : ℕ) : n^4 + p^4 + (n * p)^2 =
+  (n^2 + p^2 + n * p) * (n^2 + p^2 - n * p)
+    := by
+  calc n^4 + p^4 + (n * p)^2
+  _ = (n^2 + p^2)^2 - (n * p)^2 := by
+    ring_nf
+    omega
+  _ = (n^2 + p^2 + n * p) * (n^2 + p^2 - n * p) := by
+    rw [Nat.sq_sub_sq]
