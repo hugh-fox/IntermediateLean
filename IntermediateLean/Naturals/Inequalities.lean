@@ -10,10 +10,12 @@ theorem am_hm_2_inequality_n {a b : ℕ} : (a + b)^2 / 2 ≤ a^2 + b^2 := by
 
   exact two_mul_le_add_sq a b
 
+
 theorem le_mul_2_iff {a b : ℕ} : a ≤ b ↔ 2*a ≤ 2*b := by
   constructor
   · exact Nat.mul_le_mul_left 2
   · simp [mul_le_mul_left]
+
 
 theorem le_mul_2 {a b : ℕ} : a ≤ b ↔ 2*a ≤ 2*b := by
   constructor
@@ -21,28 +23,48 @@ theorem le_mul_2 {a b : ℕ} : a ≤ b ↔ 2*a ≤ 2*b := by
   · simp [mul_le_mul_left]
 
 
+theorem sq_le_two_pow (n : ℕ) (n_ge_4 : 4 ≤ n) : n^2 ≤ 2^n := by
+  induction' n, n_ge_4 using Nat.le_induction with m pos_m IH
+  · norm_num
+  · have : m ≤ m + 1 := by simp
+    have h₁ : (m + 1)^2 ≤ m^2 + 3 * m + 1 := by
+      calc (m + 1)^2 = m^2 + 2 * m + 1 := by ring
+        _ ≤ m^2 + 3 * m + 1 := by
+          gcongr
+          linarith [show 1 ≤ m by linarith]
+    have h₂ : m^2 + 3 * m + 1 ≤ 2 * m^2 := by
+      obtain ⟨ k, k_eq ⟩ : ∃ k, m = k + 4 := by
+        use m - 4
+        simp_all
 
--- ### Lists
+      subst k_eq
+      ring_nf
+      omega
 
--- theorem list_sum_partition : ∀ l : List ℕ
+    have h₃ : 2 * m^2 ≤ 2 * 2^m := by gcongr
+    have h₄ : 2 * 2^m = 2^(m + 1) := by ring
+    linarith
 
-theorem exists_nat_of_pos {k : ℤ} (pos_k : 0 ≤ k) :
-  ∃ n : ℕ, n = k := by
+
+theorem exists_nat_of_pos {k : ℤ} (pos_k : 0 ≤ k) : ∃ n : ℕ, n = k := by
     exact CanLift.prf k pos_k
+
 
 example {k : ℤ} (nonneg_k : 0 ≤ k) :
     ∃ n : ℕ, n = k := by
   lift k to ℕ using nonneg_k
   use k
 
+
 example {r : ℝ} (nonneg_r : 0 ≤ r) :
     ∃ n : NNReal, n = r := by
   use ⟨r, nonneg_r⟩
   rfl
 
-theorem exists_nat_of_sq {k : ℤ} :
-  ∃ n : ℕ, n = k * k := by
-    sorry
+
+theorem exists_nat_of_sq {k : ℤ} : ∃ n : ℕ, n = k * k := by
+  use k.natAbs ^ 2
+  simp [sq]
 
 
 theorem eq_sq_iff_sqrt_abs {n : ℕ} {k : ℤ} :
@@ -64,8 +86,11 @@ theorem eq_sq_iff_sqrt_abs {n : ℕ} {k : ℤ} :
   ·
     intro eq
     apply congrArg (· ^ 2) at eq
-    rw [sq_eq_sq_iff_abs_eq_abs] at eq
-    convert eq
+    rw [show √n^2 = n by simp] at eq
+    norm_cast at eq
+    simp [eq, sq]
+
+
 
 -- Using mathlib: exact Nat.le_mul_self k
 example {k : ℕ} : k ≤ k * k := by
