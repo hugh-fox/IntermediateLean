@@ -44,61 +44,93 @@ def fin_add_equiv_pair {b i j} : Fin (b ^ (i + j)) ≃ (Fin (b ^ i) × Fin (b ^ 
   (finCongr (Nat.pow_add b i j)).trans finProdFinEquiv.symm
 
 
-theorem sum_pow_add_eq_sum_pair {α : Type*}
-  [AddCommMonoid α] {f : ℕ → α} {i j b : ℕ} :
-  ∑ x ∈ Finset.range (b^(i+j)), f x =
-  ∑ p ∈ Finset.range (b^i) ×ˢ Finset.range (b^j),
-    f (b^j * p.fst + p.snd) := by
-  rw [Finset.sum_bij (fun x x_in => (x / (b^j), x % (b^j)))]
+theorem sum_add_eq_sum_pair {α : Type*}
+  [AddCommMonoid α] {i j : ℕ} {f : ℕ → α} :
+  ∑ x : Fin (i*j), f x =
+  ∑ p : Fin i × Fin j,
+    f (j * p.fst + p.snd : ℕ) := by
+  have := @Equiv.sum_comp α _ _ _ (ι := Fin i × Fin j) (κ := Fin (i*j))
+    (e := finProdFinEquiv) (g := λ x => f x)
+
+  simp [<- this, add_comm]
+
+
+theorem sum_range_mul_eq_sum_pair {α : Type*}
+  [AddCommMonoid α] {f : ℕ → α} {i j : ℕ} :
+  ∑ x ∈ Finset.range (i*j), f x =
+  ∑ p ∈ Finset.range i ×ˢ Finset.range j,
+    f (j * p.fst + p.snd) := by
+  simp [sum_add_eq_sum_pair, Finset.sum_range, Fintype.sum_prod_type,
+    Finset.sum_product
+  ]
+
+
+-- A more specific version of this was proven in episode 3, but a much
+-- better method is shown above.
+example {α : Type*}
+  [AddCommMonoid α] {f : ℕ → α} {i j : ℕ} :
+  ∑ x ∈ Finset.range (i*j), f x =
+  ∑ p ∈ Finset.range (i) ×ˢ Finset.range (j),
+    f (j * p.fst + p.snd) := by
+  rw [Finset.sum_bij (fun x x_in => (x / j, x % j))]
   · intro x x_in
     simp [Nat.pow_add', Nat.mod_lt] at x_in ⊢
+    rw [mul_comm] at x_in
     constructor
-    · have : b^j ∣ b^j * b^i := by
-        exact Nat.dvd_mul_right (b ^ j) (b ^ i)
-      exact Nat.div_lt_of_lt_mul x_in
-    · have : 0 < b^j := by
+    · exact Nat.div_lt_of_lt_mul x_in
+    · have : 0 < j := by
         exact Nat.pos_of_lt_mul_right x_in
       exact Nat.mod_lt x this
   · simp
     intro x hx y x_lt_y f_eq mod_eq
-    have x_eq := Nat.div_add_mod x (b ^ j)
-    have y_eq := Nat.div_add_mod y (b ^ j)
+    have x_eq := Nat.div_add_mod x j
+    have y_eq := Nat.div_add_mod y j
     rw [<- x_eq, <- y_eq, mod_eq, f_eq]
   · simp
     intro x y x_lt y_lt
-    use b^j * x + y
+    use j * x + y
     split_ands
-    · rw [Nat.pow_add']
-      have : b ^ j ∣ b ^ j * b ^ i := by
-        exact dvd_mul_right (b ^ j) (b ^ i)
-      suffices (b^j * x + y) / b^j < (b^j * b^i) / b^j by
+    ·
+      have : j ∣ i * j := by
+        exact dvd_mul_left j i
+      suffices (j * x + y) / j < (i * j) / j by
         apply Nat.lt_of_div_lt_div this
-      have pos_pow : 0 < b^j := by
+      have pos_j : 0 < j := by
         exact Nat.zero_lt_of_lt y_lt
-      rw [Nat.mul_div_cancel_left (b^i) pos_pow]
-      have : b ^ j ∣ b ^ j * x := by
-        exact Nat.dvd_mul_right (b ^ j) x
-      rw [show (b ^ j * x + y) / b ^ j = x + y / b^j by
-        exact Nat.mul_add_div pos_pow x y
+      rw [Nat.mul_div_cancel i pos_j]
+      have : j ∣ j * x := by
+        exact Nat.dvd_mul_right j x
+      rw [show (j * x + y) / j = x + y / j by
+        exact Nat.mul_add_div pos_j x y
       ]
-      rw [show y / b ^ j = 0 by exact Nat.div_eq_of_lt y_lt]
+      rw [show y / j = 0 by exact Nat.div_eq_of_lt y_lt]
       exact x_lt
-    · have pos_pow : 0 < b^j := by
+    · have pos_pow : 0 < j := by
         exact Nat.zero_lt_of_lt y_lt
       rw [Nat.add_div (pos_pow)]
-      have : y % b^j < b^j := by
+      have : y % j < j := by
         exact Nat.mod_lt y pos_pow
-      replace : ¬b ^ j ≤ y % b ^ j := by
+      replace : ¬j ≤ y % j := by
         exact Nat.not_le_of_lt this
       simp [this]
-      rw [show y / b^j = 0 by exact Nat.div_eq_of_lt y_lt]
+      rw [show y / j = 0 by exact Nat.div_eq_of_lt y_lt]
       exact Nat.mul_div_right x pos_pow
     · simp only [Nat.mul_add_mod_self_left]
       exact Nat.mod_eq_of_lt y_lt
   · simp
     intro x x_in_s
     congr!
-    rw_mod_cast [Nat.div_add_mod x (b^j)]
+    rw_mod_cast [Nat.div_add_mod x j]
+
+
+theorem sum_pow_add_eq_sum_pair {α : Type*}
+  [AddCommMonoid α] {f : ℕ → α} {i j b : ℕ} :
+  ∑ x ∈ Finset.range (b^(i+j)), f x =
+  ∑ p ∈ Finset.range (b^i) ×ˢ Finset.range (b^j),
+    f (b^j * p.fst + p.snd) := by
+  have := @sum_range_mul_eq_sum_pair α _ f (i := b^i) (j := b^j)
+  rw [<- Nat.pow_add] at this
+  exact this
 
 
 theorem sum_add_eq_sum_parts {α : Type*}
@@ -111,91 +143,106 @@ theorem sum_add_eq_sum_parts {α : Type*}
     (Finset.range (b ^ j)) fun x ↦ f (b ^ j * x.fst + x.snd : ℕ)
 
 
+example {i j b : ℕ} :
+  ∑ x ∈ Finset.range (b^(i+j)), (Nat.digits b x).sum =
+  ∑ x ∈ Finset.range (b^i), ∑ y ∈ Finset.range (b^j),
+    (Nat.digits b (b^j * x + y)).sum := by
+  exact sum_add_eq_sum_parts
+
+
+theorem digits_sum_eq_self {x b : ℕ} (hxb : x < b) : (b.digits x).sum = x := by
+  by_cases x_eq : x = 0
+  · simp_all
+  simp [Nat.digits_of_lt b x x_eq hxb]
+
+
+theorem digits_sum_mul {n b : ℕ} (hb : 1 < b) : (b.digits n).sum = (b.digits (b * n)).sum := by
+  by_cases n_eq : n = 0
+  · simp [n_eq]
+  conv_rhs => rhs; rhs; rw [<- pow_one b]
+  rw [Nat.digits_base_pow_mul hb (by omega)]
+  simp
+
+
 -- Closed form formula for summing digits from up to powers of 10.
-theorem digit_sum_ico_base_pow_eq {k : ℕ} (hk : 0 < k) :
-    ∑ n ∈ Finset.Ico 1 (10^k), (Nat.digits 10 n).sum = 45 * k * 10^(k-1) := by
+theorem digit_sum_ico_base_pow_eq {k b : ℕ} (hk : 0 < k) (hb : 1 < b) :
+    2 * ∑ n ∈ Finset.range (b^k), (Nat.digits b n).sum = (b-1) * k * b^k := by
+  have pos_b : 0 < b := by
+    exact Nat.zero_lt_of_lt hb
+
+  have sum_sum_digits : 2 * ∑ x ∈ Finset.range b, (b.digits x).sum = b * (b - 1) := by
+    rw [mul_comm, <- Finset.sum_range_id_mul_two]
+    congr! with x x_in
+    simp at x_in
+    simp [digits_sum_eq_self x_in]
+
   induction' k, (by linarith : 1 ≤ k) using Nat.le_induction with m ge ih
-  · simp [show Finset.Ico 1 10 = {1, 2, 3, 4, 5, 6, 7, 8, 9} by rfl]
+  · simp [sum_sum_digits, mul_comm]
   · specialize ih ge
     have pos_m : 0 < m := by positivity
 
     have digits_eq_cons := Nat.digits_eq_cons_digits_div
-      (by simp : 1 < 10) (Nat.ne_zero_of_lt ge)
+      hb (Nat.ne_zero_of_lt ge)
 
-    have pos_n : ∀ n ∈ Finset.Ico 1 (10^m), 0 < n := by
+    have pos_n : ∀ n ∈ Finset.Ico 1 (b^m), 0 < n := by
       intro n n_in
       simp at n_in
       exact n_in.left
 
-    have {n} : ∑ n ∈ Finset.Ico 1 (10 ^ n), (Nat.digits 10 n).sum =
-        ∑ n ∈ Finset.range (10 ^ n), (Nat.digits 10 n).sum := by
-      simp [Finset.sum_range_eq_add_Ico]
-
-    rw [this] at ih ⊢
-    clear this
     rw [sum_pow_add_eq_sum_pair]
 
-    have : ∑ p ∈ Finset.range (10 ^ m) ×ˢ Finset.range 10, (Nat.digits 10 (10 * p.1 + p.2)).sum =
-        ∑ p ∈ Finset.range (10 ^ m) ×ˢ Finset.range 10,
-        ((Nat.digits 10 (10 * p.1)).sum + (Nat.digits 10 p.2).sum) := by
+    have : ∑ p ∈ Finset.range (b ^ m) ×ˢ Finset.range b, (Nat.digits b (b * p.fst + p.snd)).sum =
+        ∑ p ∈ Finset.range (b ^ m) ×ˢ Finset.range b,
+        ((Nat.digits b (b * p.fst)).sum + (Nat.digits b p.snd).sum) := by
       apply Finset.sum_congr rfl
       intro p hp
-      have h : p.2 < 10 := by
+      have h : p.snd < b := by
         rw [Finset.mem_product] at hp
-        exact Finset.mem_range.mp hp.2
+        exact Finset.mem_range.mp hp.right
 
-      have digit_sum_add_single_digit (n d : ℕ) (hd : d < 10) :
-        (Nat.digits 10 (10 * n + d)).sum = (Nat.digits 10 (10 * n)).sum + (Nat.digits 10 d).sum := by
-        -- For single digits, digits 10 d is either [] (if d = 0) or [d] (if d > 0)
+      have digit_sum_add_single_digit (n d : ℕ) (hd : d < b) :
+        (Nat.digits b (b * n + d)).sum = (Nat.digits b (b * n)).sum + (Nat.digits b d).sum := by
         cases' d with d
-        · simp [Nat.digits]
-        · have hd' : d + 1 < 10 := hd
-          simp [List.sum_cons, List.sum_nil]
-          rw [show (d + 1) % 10 = d + 1 by exact Nat.mod_eq_of_lt hd]
-          simp [add_comm]
-          rw [Nat.add_div (by simp)]
-          simp
-          split_ifs with mod_le
-          · simp_all
-            omega
-          · simp_all [Nat.div_eq_of_lt hd, Nat.mod_eq_of_lt hd]
-            rw [<- ten_mul_digits_sum_eq_digits_sum, mul_comm]
+        · simp
+        · have hd' : d + 1 < b := hd
+          rw [add_comm, Nat.digits_add b hb _ _ hd (by omega)]
+          simp [add_comm, List.sum_cons, List.sum_nil, digits_sum_eq_self hd]
+          exact digits_sum_mul hb
 
       exact digit_sum_add_single_digit p.1 p.2 h
 
     simp [this]
     clear this
     rw [@Finset.sum_product]
-    simp [Finset.sum_add_distrib]
-    simp [show Finset.range 10 = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9} by rfl]
+    simp [Finset.sum_add_distrib, mul_add]
+    simp [<- Finset.mul_sum]
+    conv_lhs => rhs; rw [<- mul_assoc, mul_comm 2, mul_assoc, sum_sum_digits]
+    simp [<- digits_sum_mul hb]
+    rw [<- mul_assoc, mul_comm 2, mul_assoc]
+    simp [ih]
     ring_nf
-    congr
-    conv_rhs => rw [show 10 ^ m = 10 * 10 ^ (m - 1) by
-      rw [<- Nat.pow_add_one']
-      simp
-      omega
-    ]
-    simp [<- Finset.sum_mul]
-    suffices ∑ i ∈ Finset.range (10^m), (Nat.digits 10 (i * 10)).sum = m * 10 ^ (m - 1) * 45 by
-      linarith
-    ring_nf at ih
-    have : ∑ i ∈ Finset.range (10 ^ m), (Nat.digits 10 (i * 10)).sum =
-      ∑ i ∈ Finset.range (10 ^ m), (Nat.digits 10 i).sum := by
-      congr! 1 with i i_in
-      simp at i_in
-      exact ten_mul_digits_sum_eq_digits_sum
-
-    rw [this]
-    exact ih
 
 
 theorem digit_sum_base_pow_eq {k : ℕ} (hk : 0 < k) :
   (∑ n ∈ Finset.range (10^k), (Nat.digits 10 n).sum) =
     45 * k * 10^(k-1) := by
-  rw [Finset.range_eq_Ico]
-  rw [Finset.sum_eq_sum_Ico_succ_bot (Nat.pos_of_neZero (10 ^ k))]
-  simp
-  exact digit_sum_ico_base_pow_eq hk
+  -- simp
+  have := digit_sum_ico_base_pow_eq hk (by simp : 1 < 10)
+  have : ∑ n ∈ Finset.range (10 ^ k), (Nat.digits 10 n).sum = (10 - 1) * k * 10 ^ k / 2 := by
+    omega
+
+  rw [this]
+  simp [show 10^k = 10 * 10^(k-1) by
+    simp [<- Nat.pow_add_one']
+    exact (Nat.sub_eq_iff_eq_add hk).mp rfl
+  ]
+  norm_num [<- Nat.mul_assoc, mul_comm]
+
+  rw [show k * 9 * 10 * 10 ^ (k - 1) = 2 * k * 45 * 10 ^ (k - 1) by
+    linarith
+  ]
+  field_simp [mul_assoc]
+  omega
 
 
 theorem last_digit_of_div_five (n : ℕ) (pos_n : 0 < n) (h : 5 ∣ n) :
